@@ -36,5 +36,5 @@ android.arch = arm64-v8a
 # Uncomment + adjust path if building locally on Linux/WSL)
 #android.java_home = /usr/lib/jvm/java-17-openjdk-amd64
 
-# Use latest python-for-android branch for best compatibility
-p4a.branch = master
+# python-for-android: use default stable branch for reliable builds
+# p4a.branch = master

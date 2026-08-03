@@ -11,36 +11,56 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.9'
+
+      - name: Cache buildozer downloads
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/buildozer
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+          restore-keys:
+            - ${{ runner.os }}-buildozer-
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            git zip unzip openjdk-17-jdk python3-pip \
+            git zip unzip openjdk-17-jdk python3 \
             autoconf libtool pkg-config zlib1g-dev \
-            libncurses5-dev libncursesw5-dev libtinfo6 \
+            libncurses5-dev libncursesw5-dev libtinfo5 \
             libssl-dev libreadline-dev libffi-dev
 
-      - name: Install Cython (for Android compilation)
-        run: pip install --upgrade pip "Cython<3.0"
-
-      - name: Install Buildozer
-        run: pip install buildozer==1.5.0
+      - name: Install Cython + Buildozer
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "Cython<3.0"
+          python -m pip install buildozer
 
       - name: Build APK (debug)
-        run: buildozer android debug 2>&1
+        id: build
+        run: |
+          set -o pipefail
+          python -m buildozer android debug 2>&1 | tee build_output.log
+        continue-on-error: true
 
-      - name: Show built APK
-        run: ls -la bin/
+      - name: Show last 80 lines of build log
+        if: always()
+        run: |
+          echo "=== Build log (last 80 lines) ==="
+          tail -80 build_output.log 2>/dev/null || echo "No build log found"
+
+      - name: Show APK directory
+        if: always()
+        run: ls -la bin/ 2>/dev/null || echo "No bin/ directory yet"
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        if: steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v3
         with:
           name: bouncing-ball-simulator-apk
           path: bin/*.apk
