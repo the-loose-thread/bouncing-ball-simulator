@@ -18,16 +18,30 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Build APK with Buildozer
-        uses: kehvinkor/buildozer-action@v6
-        with:
-          target: android-31
-          build_type: debug
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git zip unzip openjdk-17-jdk python3-pip \
+            autoconf libtool pkg-config zlib1g-dev \
+            libncurses5-dev libncursesw5-dev libtinfo6 \
+            libssl-dev libreadline-dev libffi-dev
+
+      - name: Install Cython (for Android compilation)
+        run: pip install --upgrade pip Cython
+
+      - name: Install Buildozer
+        run: pip install buildozer
+
+      - name: Build APK (debug)
+        run: |
+          buildozer android debug
+
+      - name: Show built APK
+        run: ls -la bin/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: bouncing-ball-simulator-apk
-          path: |
-            bin/*.apk
-            bin/*.aab
+          path: bin/*.apk
