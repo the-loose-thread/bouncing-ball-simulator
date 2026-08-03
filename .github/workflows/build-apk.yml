@@ -23,9 +23,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends
             git zip unzip openjdk-17-jdk python3
-            autoconf libtool pkg-config zlib1g-dev
-            libncurses5-dev libncursesw5-dev libtinfo5
+            autoconf automake libtool autopoint pkg-config
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5
             libssl-dev libreadline-dev libffi-dev
+
+      - name: Create LT_SYS_SYMBOL_USCORE macro
+        run: |
+          # libtool.m4 is missing LT_SYS_SYMBOL_USCORE in Ubuntu's packaging.
+          # libffi's configure.ac needs it. Define a no-op to satisfy autoconf.
+          echo 'AC_DEFUN([LT_SYS_SYMBOL_USCORE], [:])' >> /usr/share/aclocal/libtool.m4
 
       - name: Install Cython + Buildozer
         run: |
@@ -42,20 +48,33 @@ jobs:
           echo "d9ba35bed1766e1911883474ebd7d325d6e0b843" > "$SDK/licenses/intel-android-extra-license"
           echo "13d8b763091b9c5810c9398376440274" > "$SDK/licenses/mips-android-sysimage-license"
           echo "5f2607c710f2e5c0c5c0c2c48f82c75b" > "$SDK/licenses/google-gdk-license"
-          echo "Android SDK license files created"
 
       - name: Build APK (debug)
         id: build
         run: |
-          set -o pipefail
-          python -m buildozer -v android debug 2>&1 | tee build_output.log
+          python -m buildozer -v android debug > build_output.log 2>&1
+          BUILD_EXIT=$?
+          if [ $BUILD_EXIT -ne 0 ]; then
+            # Fix: p4a upgrades pip to latest which creates a corrupted venv.
+            # Patch p4a's build.py to pin pip to 25.3 and retry.
+            P4A_PY=$(find $HOME/.buildozer -path "*/python-for-android/pythonforandroid/build.py" 2>/dev/null | head -1)
+            if [ -n "$P4A_PY" ]; then
+              echo "Patching p4a build.py to pin pip==25.3..."
+              sed -i 's|pip install -U pip|pip install --force-reinstall pip==25.3|' "$P4A_PY"
+              rm -rf .buildozer/android/platform/build-*_*/build/venv
+              echo "Retrying build..."
+              python -m buildozer -v android debug > build_output.log 2>&1
+              BUILD_EXIT=$?
+            fi
+          fi
+          exit $BUILD_EXIT
         continue-on-error: true
 
-      - name: Show build log on failure
+      - name: Show build log
         if: always()
         run: |
-          echo "=== Last 100 lines of build log ==="
-          tail -100 build_output.log 2>/dev/null || echo "No build log found"
+          echo "=== Last 50 lines of build log ==="
+          tail -50 build_output.log 2>/dev/null || echo "No build log found"
 
       - name: Show APK directory
         if: always()
