@@ -11,12 +11,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
       - name: Install system dependencies
         run: |
@@ -28,14 +28,13 @@ jobs:
             libssl-dev libreadline-dev libffi-dev
 
       - name: Install Cython (for Android compilation)
-        run: pip install --upgrade pip Cython
+        run: pip install --upgrade pip "Cython<3.0"
 
       - name: Install Buildozer
-        run: pip install buildozer
+        run: pip install buildozer==1.5.0
 
       - name: Build APK (debug)
-        run: |
-          buildozer android debug
+        run: buildozer android debug 2>&1
 
       - name: Show built APK
         run: ls -la bin/

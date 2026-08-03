@@ -11,7 +11,7 @@ source.recursive = True
 version = 1.0
 
 # Python requirements — kivy provides the UI framework
-requirements = python3,kivy
+requirements = python3,kivy,setuptools
 
 # Display
 orientation = landscape
@@ -35,3 +35,6 @@ android.arch = arm64-v8a
 # Java home (commented out — GitHub Actions handles Java setup
 # Uncomment + adjust path if building locally on Linux/WSL)
 #android.java_home = /usr/lib/jvm/java-17-openjdk-amd64
+
+# Use latest python-for-android branch for best compatibility
+p4a.branch = master
