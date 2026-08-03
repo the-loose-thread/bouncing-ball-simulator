@@ -1,0 +1,25 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+.pytest_cache/
+.coverage
+*.log
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+bin/
+*.apk
+*.aab
+.buildozer/
+
+# Kivy logs
+.kivy/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
