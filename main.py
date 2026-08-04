@@ -21,7 +21,7 @@ from kivy.uix.button import Button
 from kivy.uix.widget import Widget
 from kivy.utils import platform
 
-from car_notification import create_car_notification
+from car_notification import create_car_notification, get_notification_status
 from ball_physics import (
     WIDTH, HEIGHT, GROUND_Y, BALL_RADIUS,
     GRAVITY, BG_COLOR, GROUND_COLOR,
@@ -123,6 +123,9 @@ class BallWorld(Widget):
             elif key == 'status':
                 lbl.text = "⏸ PAUSED" if self.paused else ""
 
+            elif key == 'notif':
+                lbl.text = f"notif: {get_notification_status()[:40]}"
+
     # -- game loop -------------------------------------------------------
     def start(self):
         Clock.schedule_interval(self._tick, 1 / 120)
@@ -204,6 +207,7 @@ class BouncingBallApp(App):
             ('height',   "height: 0.0"),
             ('status',   ""),
             ('version',  "v1.3 - AA Ready"),
+            ('notif',  "notif: ..."),
         ]):
             lbl = Label(text=init, color=rgba((220, 220, 220)),
                         font_size=sp(14), halign='left',
