@@ -203,7 +203,7 @@ class BouncingBallApp(App):
             ('velocity', "velocity: 0.0, 0.0"),
             ('height',   "height: 0.0"),
             ('status',   ""),
-            ('version',  "v1.2 - AA Fixed"),
+            ('version',  "v1.3 - AA Ready"),
         ]):
             lbl = Label(text=init, color=rgba((220, 220, 220)),
                         font_size=sp(14), halign='left',
