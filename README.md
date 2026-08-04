@@ -11,6 +11,7 @@ desktop (Kivy), and Android (via Buildozer).
 | `ball_physics.py` | Pure physics engine — no GUI deps, shared by all versions |
 | `bouncing_ball.py` | pygame desktop version |
 | `main.py` | Kivy app (Android entry point + desktop fallback) |
+| `car_notification.py` | Android Auto notification support (PyJNIus) |
 | `test_bouncing_ball.py` | pytest suite — 11 tests covering physics |
 | `buildozer.spec` | Android APK packaging config |
 | `.github/workflows/build-apk.yml` | CI workflow — builds APK on every push |
@@ -56,3 +57,41 @@ The APK is built automatically by **GitHub Actions** whenever you push to `main`
    ```
    (Or email the APK to your phone and tap to install — enable
    "Install unknown apps" for your browser/email app first.)
+
+## Android Auto
+
+The app creates a **persistent notification** that appears in the
+Android Auto notification tray on your car's screen.  Tapping it
+launches the bouncing ball simulator.
+
+**How it works:**
+- `car_notification.py` uses PyJNIus (bundled with Kivy for Android)
+to create an Android `Notification` with `CATEGORY_SERVICE`.
+- The notification is **ongoing** (non-dismissable) and includes a
+`PendingIntent` that relaunches `PythonActivity` via the app icon.
+- On desktop, the module is a graceful **no-op** (returns `False`).
+- Requires `POST_NOTIFICATIONS` + `FOREGROUND_SERVICE` permissions
+  (already declared in `buildozer.spec`).
+
+**To use in your car:**
+1. Install the APK on your phone.
+2. Connect to Android Auto (USB or wireless).
+3. Swipe down to reveal the notification tray on the car screen.
+4. Find "Bouncing Ball Simulator" — tap it.
+5. The app launches — the ball starts bouncing on your car display!
+
+**Architecture:**
+```
+┌─────────────────┐     ┌────────────────────────┐
+│ car_screen      │────│ Android Auto           │
+│ notification   │  → │  notification tray     │
+│ (PyJNIus)      │     │                        │
+└─────────────────┘     └──────────┬──────────────┘
+                                     │
+                                     ▼
+                            ┌──────────────────────┐
+                            │ Kivy App (main.py)   │
+                            │ BallWorld + Physics  │
+                            └──────────────────────┘
+```
+
