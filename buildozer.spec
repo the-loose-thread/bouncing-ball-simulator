@@ -32,6 +32,10 @@ android.minapi = 21
 android.sdk = 34
 android.ndk = 26b
 android.arch = arm64-v8a
+# Notification permissions for Android Auto
+# POST_NOTIFICATIONS: needed on Android 13+ to show notifications
+# FOREGROUND_SERVICE: for persistent notifications
+android.permissions = POST_NOTIFICATIONS,FOREGROUND_SERVICE
 # Java home (commented out — GitHub Actions handles Java setup
 # Uncomment + adjust path if building locally on Linux/WSL)
 #android.java_home = /usr/lib/jvm/java-17-openjdk-amd64

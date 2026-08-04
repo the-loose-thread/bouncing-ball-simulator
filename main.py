@@ -21,6 +21,7 @@ from kivy.uix.button import Button
 from kivy.uix.widget import Widget
 from kivy.utils import platform
 
+from car_notification import create_car_notification
 from ball_physics import (
     WIDTH, HEIGHT, GROUND_Y, BALL_RADIUS,
     GRAVITY, BG_COLOR, GROUND_COLOR,
@@ -185,6 +186,10 @@ class BouncingBallApp(App):
         if platform != 'android':
             Window.size = (WIDTH, HEIGHT)
         Window.clear()
+
+        # Android Auto: create a persistent notification so the user can
+        # tap it from the car screen to launch the bouncing ball.
+        create_car_notification()
 
         root = FloatLayout()
 
