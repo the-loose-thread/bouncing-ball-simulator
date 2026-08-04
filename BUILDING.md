@@ -213,17 +213,49 @@ version.
 
 ## Android Auto Notification
 
-### Issue: Notification doesn't appear on car screen
+### Issue: Notification doesn't appear on car screen (v1.2)
 Even though the notification is created successfully, it doesn't show
-up on the Android Auto car display.
+up on the Android Auto car display. Two root causes:
 
-### Root cause: `VISIBILITY_SECRET` + broken `setCategory`
+### Root cause 1: `VISIBILITY_SECRET` + broken `setCategory`
 1. **Missing `setVisibility()`** → default is `VISIBILITY_SECRET`, which
    hides the notification from lock screen, Android Auto, and head-up
    displays.
 2. **`setCategory()` used reflection** → broken code called
    `builder().getClass().getDeclaredField()` on a *new* builder instance,
    which would never find `CATEGORY_SERVICE`.
+
+### Root cause 2: `POST_NOTIFICATIONS` runtime permission (Android 13+)
+The app targets API 33 (see `BUILD_EXIT = '33'` in build logs), which
+means `POST_NOTIFICATIONS` is a **runtime permission**. The old v1.2
+code never requested it — the notification was silently blocked.
+
+Additionally, Android 16 (API 36, as on Pixel 8a) enforces this permission
+strictly. And using the app's colored launcher icon as a notification
+`setSmallIcon()` causes silent failures on Android 13+ (icons must be
+monochrome).
+
+### Fix (`car_notification.py` v1.3):
+```python
+# 1. Runtime permission check (Android 13+)
+try    ContextCompat = autoclass('androidx.core.content.ContextCompat')
+       ActivityCompat = autoclass('androidx.core.app.ActivityCompat')
+       granted = ContextCompat.checkSelfPermission(
+           activity, 'android.permission.POST_NOTIFICATIONS') == 0
+       if not granted:
+           ActivityCompat.requestPermissions(
+               activity, ['android.permission.POST_NOTIFICATIONS'], 0)
+           Clock.schedule_once(lambda dt: create_car_notification(...), 3.0)
+
+# 2. System icon (always valid monochrome)
+       builder.setSmallIcon(16903401)  # ic_dialog_info
+
+# 3. VISIBILITY_PUBLIC (critical for Android Auto)
+       builder.setVisibility(Notification.VISIBILITY_PUBLIC)
+       builder.setCategory(Notification.CATEGORY_SERVICE)
+       builder.setLocalOnly(False)
+       builder.setAutoCancel(False)
+```
 
 ### Fix (`car_notification.py`):
 ```python
@@ -251,17 +283,25 @@ except Exception as exc:
 ```
 
 ### How to verify:
-1. **App HUD** → bottom-left shows `v1.2 - AA Fixed`
-2. **Toast on open** → "Android Auto notification created!"
+1. **App HUD** → bottom-left shows `v1.3 - AA Ready`
+2. **Toast on open** → either:
+   - "Android Auto notification created!" (success)
+   - "Tapping to enable notifications — please accept" (need to accept permission dialog)
+   - "Notification error: ..." (bug — report the message)
 3. **Phone notification tray** → persistent "Bouncing Ball Simulator"
 4. **Android Auto** → notification in car screen's status area
 
 ### Testing in the car:
-1. Install v1.2 APK (uninstall v1.1 first!)
-2. Open app → verify Toast appears
-3. Check phone notification shade → verify notification exists
-4. Connect to Android Auto → notification should appear on car screen
-5. Tap notification → app launches with bouncing ball
+1. **UNINSTALL** the old v1.2 APK (Settings → Apps → Uninstall)
+2. Install v1.3 APK
+3. Open app → **accept the notification permission dialog** (tap "Allow")
+4. Check phone notification shade → verify notification exists
+5. Connect to Android Auto → notification should appear on car screen
+6. Tap notification → app launches with bouncing ball
+
+> **Android 16 (Pixel 8a):** The permission dialog is critical. If you
+> previously denied it, go to Settings → Apps → Bouncing Ball →
+> Notifications → enable "Show notifications" manually.
 
 ---
 
@@ -274,7 +314,7 @@ except Exception as exc:
 | `car_notification.py` | Android Auto notification via PyJNIus |
 | `bouncing_ball.py` | pygame desktop version |
 | `test_bouncing_ball.py` | 11 pytest tests (all passing) |
-| `buildozer.spec` | APK packaging config (arm64-v8a, v1.2) |
+| `buildozer.spec` | APK packaging config (arm64-v8a, v1.3) |
 | `.github/workflows/build-apk.yml` | CI workflow with all fixes |
 | `deploy.bat` | One-click GitHub deploy helper |
 | `BUILDING.md` | This file |
@@ -311,7 +351,11 @@ Notification not on car screen?
   → Check VISIBILITY_PUBLIC → Bug (Android Auto visibility)
   → Check Toast feedback → did notification actually get created?
   → Check phone notification tray first
+  → Check VISIBILITY_PUBLIC
+  → Check Toast feedback → did notification actually get created?
+  → Check phone notification tray first
   → Check notification channel in Settings → Apps → [App] → Notifications
+  → Check POST_NOTIFICATIONS permission (Android 13+ → runtime request)
 
 APK installs but app crashes?
   → Check logcat: adb logcat | grep python
