@@ -8,7 +8,7 @@ package.domain = org.codepuppy
 source.dir = .
 source.include_exts = py
 source.recursive = True
-version = 1.0
+version = 1.1
 
 # Python requirements — kivy provides the UI framework
 requirements = python3,kivy,setuptools
